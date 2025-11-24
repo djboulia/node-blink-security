@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/npm/l/node-blink-security.svg)
 
 # node-blink-security
-This is a Node.js version of [this python library](https://github.com/fronzbot/blinkpy). It allows to communicate with Blink Home Security System from a Node.js application.
+This is a Node.js version of [this python library](https://github.com/fronzbot/blinkpy). It allows communication with Blink Home Security System from a Node.js application.
   
 # Installation
 ```
@@ -16,36 +16,109 @@ npm install node-blink-security
 
 # Usage
 
-```javascript
-const Blink = require('node-blink-security');
+Logging in with a valid `username` and `password` will generate a 2FA verification text or email from Blink. You will be prompted via the command line for the 2FA code.  Once successfully verified, you will receive an OAuth token and refresh token information that can be stored and reused for future Blink access to avoid needing to re-verify each time.
 
-var blink = new Blink('YOUR_EMAIL', 'YOUR_PASSWORD', 'DEVICE_ID');
+```javascript
+const fs = require("fs");
+const {BlinkAuth, Blink}  = require('node-blink-security');
+
+const blinkAuth = new BlinkAuth({username: 'YOUR_EMAIL', password: 'YOUR_PASSWORD', deviceId:'DEVICE_ID'});
+const blink = new Blink(blinkAuth);
+
+const blink = new Blink();
 blink.setupSystem()
   .then(() => {
+    // save login creds for next time
+    const loginAttributes = blinkAuth.getLoginAttributes();
+    console.log('new tokens', loginAttributes);
+
+    const jsonString = JSON.stringify(loginAttributes, null, 2);
+     fs.writeFile('creds.json', jsonString, (err) => {
+        if (err) {
+          console.error('Error writing JSON file:', err);
+        } else {
+          console.log('JSON data successfully written to creds.json');
+        }
+    });
+
     blink.setArmed()
       .then(() => {
         // see the object dump for details
-        console.log(blink);
+        console.log('blink');
       });
   }, (error) => {
     console.log(error);
   });
 ```
 
+Previously stored login credentials from `getLoginCredentials` can be reused like this:
+
+```javascript
+const {BlinkAuth, Blink}  = require('node-blink-security');
+const fs = require("fs");
+const creds = require("./creds.json");
+
+const blinkAuth = new BlinkAuth(creds, true /* noPrompt */);
+const blink = new Blink(blinkAuth);
+
+blink.setupSystem("Cary Outside").then(
+  () => {
+    blink.setArmed()
+      .then(() => {
+        // see the object dump for details
+        console.log(blink);
+      });
+  },
+  (error) => {
+    console.log(error);
+  }
+);
+```
+
+Tokens expire after 4 hours. The `BlinkAuth` will automatically renew the access token when it expires. You can provide a callback to `BlinkAuth` to be notified when tokens are refreshed and store the new tokens like so:
+
+```javascript
+const {BlinkAuth, Blink}  = require('node-blink-security');
+const fs = require("fs");
+const creds = require("./creds.json");
+
+const blinkAuth = new BlinkAuth(creds, true, callback= () => {
+  // callback when tokens are refreshed
+  const loginAttributes = blinkAuth.getLoginAttributes();
+  console.log('refreshed tokens', loginAttributes);
+
+  const jsonString = JSON.stringify(loginAttributes, null, 2);
+  fs.writeFile('creds.json', jsonString, (err) => {
+    if (err) {
+      console.error('Error writing JSON file:', err);
+    } else {
+      console.log('JSON data successfully written to creds.json');
+    }
+  });
+});
+```
+
 # API
+
+```javascript
+class BlinkAuth(loginData, noPrompt=false, callback=null)
+```
+
+Holds authentication information for the Blink account.  If no `loginData` is provided, you will be prompted for `username` and `password`.  If `username` and `password` are provided, you will be prompted for a 2FA code.  If you supply the results of `getLoginAttributes()` from a prior session and specify `noPrompt=true`, the prior authentication information will be used for accessing the Blink API.  Finally, if you provide a `callback` function, it will be called whenever the login attributes are refreshed, allowing you to store the new tokens for future use.
+
+## loginData
+
+* `username` - your Blink account email
+* `password` - your Blink account password
+* `deviceId` - identifies your device and registers it in your account. It's required since version 4.0.0 of this package as this is when Blink switched to 2-factor authentication flow. The value is provided by you and it should let you identify the device correctly when you receive a verification email from Blink.
+
+## Properties
+
+* `blinkAuth.getLoginAttributes` - returns the current login attributes (token, refresh token, token expiration, etc.) that can be stored for future use
 
 ```javascript
 class Blink
 ```
-
-## Constructor
-* `email` - your Blink account email
-* `password` - your Blink account password
-* `deviceId` - identifies your device and registers it in your account. It's required since version 4.0.0 of this package as this is when Blink switched to 2-factor authentication flow. The value is provided by you and it should let you identify the device correctly when you receive a verification email from Blink.
-* `options`
-* * `auth_2FA: false` - set to `true` if you want to receive verification code for each login, otherwise you'll receive verification email only once for the first time and after that the device will be remembered by Blink.
-* * `verification_timeout: 60000` - number of milliseconds to wait for email verification until retrying account login
-* * `device_name: "node-blink-security"` - this name appears in verification email along with your `deviceId`
 
 ## Properties
 

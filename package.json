@@ -17,10 +17,7 @@
     "system"
   ],
   "author": "Dmitry Ivanov <madshall.dev@gmail.com>",
-  "license": {
-    "type": "MIT",
-    "url": "https://github.com/madshall/node-blink-security/blob/master/LICENSE"
-  },
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/madshall/node-blink-security/issues"
   },
@@ -29,6 +26,7 @@
     "node": ">=6.0.0"
   },
   "dependencies": {
+    "prompt-sync": "^4.2.0",
     "request": "^2.88.0"
   },
   "devDependencies": {

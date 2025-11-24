@@ -3,5 +3,6 @@
  */
 
 const Blink = require('./lib/blink');
+const BlinkAuth = require('./lib/blink_auth');
 
-module.exports = Blink;
+module.exports = { Blink, BlinkAuth };
