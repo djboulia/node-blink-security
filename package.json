@@ -26,8 +26,10 @@
     "node": ">=6.0.0"
   },
   "dependencies": {
+    "htmlparser2": "^10.0.0",
     "prompt-sync": "^4.2.0",
-    "request": "^2.88.0"
+    "request": "^2.88.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "chai": "^4.1.2",
